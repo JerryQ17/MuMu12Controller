@@ -1,5 +1,32 @@
 import os
+import cv2
 import subprocess
+
+
+def compare(img_name: str, sub_img_name: str):
+    """
+    compare函数会在img_name图片中寻找最接近sub_img_name图片的坐标，并返回该位置坐标
+    :param img_name: 要查找的图片
+    :param sub_img_name: 要查找的图片的子图片
+    :return: x, y
+    """
+    if not os.path.isfile(img_name):
+        raise FileNotFoundError(f"File not found: {img_name}")
+    if not os.path.isfile(sub_img_name):
+        raise FileNotFoundError(f"File not found: {sub_img_name}")
+
+    img = cv2.imread(img_name)
+    sub_img = cv2.imread(sub_img_name)
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    sub_img_gray = cv2.cvtColor(sub_img, cv2.COLOR_BGR2GRAY)
+    result = cv2.matchTemplate(img_gray, sub_img_gray, cv2.TM_CCOEFF_NORMED)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+    top_left = max_loc
+    bottom_right = (top_left[0] + sub_img.shape[1], top_left[1] + sub_img.shape[0])
+    x = int((top_left[0] + bottom_right[0]) / 2)
+    y = int((top_left[1] + bottom_right[1]) / 2)
+    print(f"在{os.path.basename(img_name)}与{os.path.basename(sub_img_name)}最接近的位置是({x},{y})")
+    return x, y
 
 
 class Adb:
