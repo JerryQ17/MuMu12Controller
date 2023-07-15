@@ -49,7 +49,7 @@ if __name__ == "__main__":
                 print(f"识别到船坞已满，自动退役舰船，当前退役次数为{clean_num}")
                 continue
             x, y = adb.compare(r".\image\ScreenShot.png", r".\image\again.png")
-            if (x == 1701 or x == 1829) and y == 1300:
+            if (x == 1689 or x == 1829) and y == 1247:
                 again_num += 1
                 opr.click(x, y)
                 print(f"识别到一局游戏结束，自动点击'再次前往'，当前局数为{again_num}")
