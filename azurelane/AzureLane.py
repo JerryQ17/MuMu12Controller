@@ -183,23 +183,23 @@ class AzureLane:
             pickle.dump((self.__retire_position, self.__encore_position), file)
         return self
 
-    def _check_retire_and_exec(self, x: int, y: int):
+    def _check_retire_and_exec(self, x: int, y: int, sleep: float = 1.5):
         if x == self.__retire_position[0][0] and y == self.__retire_position[0][1]:
             if self.__enable_logging:
                 self.__logger.info(f"第{self.__retire_count}次退役舰船")
             for x, y in self.__retire_position:
                 self.__adb.click(x, y)
-                time.sleep(1.5)
+                time.sleep(sleep)
             self.__retire_count += 1
         return self
 
-    def _check_encore_and_exec(self, x: int, y: int):
+    def _check_encore_and_exec(self, x: int, y: int, sleep: float = 1.5):
         for ex, ey in self.__encore_position:
             if x == ex and y == ey:
                 if self.__enable_logging:
                     self.__logger.info(f"第{self.__encore_count}次再次出击")
                 self.__adb.click(x, y)
-                time.sleep(1.5)
+                time.sleep(sleep)
                 self.__encore_count += 1
                 break
         return self
@@ -234,8 +234,8 @@ class AzureLane:
                 if self.__enable_logging:
                     self.__logger.info(f"第{cur}次循环")
                 sc_path = self.__adb.screenshot(self.__temp_path)
-                self._check_encore_and_exec(*self._compare(sc_path, self.__encore_path))
-                self._check_retire_and_exec(*self._compare(sc_path, self.__retire_path))
+                self._check_encore_and_exec(*self._compare(sc_path, self.__encore_path), sleep=sleep)
+                self._check_retire_and_exec(*self._compare(sc_path, self.__retire_path), sleep=sleep)
                 time.sleep(sleep)
         except Exception as error:
             if self.__enable_logging:
