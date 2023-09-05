@@ -1,21 +1,19 @@
 import os
-import adb
 import cv2
 import time
 import pickle
 import logging
+from sys import stdout
 from typing import TextIO
 
+from src.utils import adb
 
-class AzureLane:
 
-    def __init__(
-            self,
-            adb_path: str, pos_path: str, retire_path: str, encore_path: str, temp_path: str = r'.\image\sc.png',
-            port: int = 16384, max_count: int = -1,
-            *,
-            enable_logging: bool = False, log_stream: TextIO | None = None, log_file: str | None = None
-    ):
+class AzureLaneAssistant:
+
+    def __init__(self, adb_path: str, pos_path: str, retire_path: str, encore_path: str,
+                 temp_path: str = r'.\image\sc.png', port: int = 16384, max_count: int = -1, *,
+                 log_stream: TextIO | None = stdout, log_file: str | None = None):
         # 初始化adb
         self.__adb: adb.Adb = adb.Adb(adb_path, port)
         # 初始化计数器、图片路径和位置列表
@@ -35,28 +33,23 @@ class AzureLane:
         self.pos_path = pos_path
         self.load(pos_path)
         # 设置日志
-        self.__enable_logging: bool = bool(enable_logging)
-        if self.__enable_logging:
-            self.__logger: logging.Logger = logging.getLogger(str(self))
-            self.__logger.setLevel(logging.DEBUG)
-            if log_stream is not None:
-                self.__logger.addHandler(logging.StreamHandler(log_stream))
-            if log_file is not None:
-                self.__logger.addHandler(logging.FileHandler(log_file))
-            self.__logger.info(f"{self} initialized")
+        self.__logger: logging.Logger = logging.getLogger(__file__)
+        self.__logger.setLevel(logging.DEBUG)
+        if log_stream is not None:
+            self.__logger.addHandler(logging.StreamHandler(log_stream))
+        if log_file is not None:
+            self.__logger.addHandler(logging.FileHandler(log_file))
+        self.__logger.info(f"{self} initialized")
         # 设置临时图片路径
         self.__temp_path: str = ''
         self.temp_path = temp_path
 
     def __del__(self):
-        if hasattr(self, f'_{self.__class__.__name__}__enable_logging') and self.__enable_logging:
-            self.__logger.handlers.clear()
+        self.__logger.handlers.clear()
         self.__adb.disconnect().kill_server()
 
     def __str__(self):
-        return f"{self.__class__.__name__}(port={self.__adb.port}," \
-               f" max_count={self.__max_count}," \
-               f" enable_logging={self.__enable_logging})"
+        return f"{self.__class__.__name__}(port={self.__adb.port}, max_count={self.__max_count})"
 
     @property
     def adb(self) -> adb.Adb:
@@ -171,6 +164,43 @@ class AzureLane:
             raise TypeError(f"Invalid type: ({type(position[0])} , {type(position[1])})")
         return position
 
+    @staticmethod
+    def run(*args, sleep, **kwargs):
+        AzureLaneAssistant(*args, **kwargs).d3(sleep)
+
+    @staticmethod
+    def run_with_cmd():
+        import argparse
+        parser = argparse.ArgumentParser()
+        # 添加参数
+        parser.add_argument("-a", "--adb", "--adb-path", type=str,
+                            default=r"C:\Program Files\Netease\MuMuPlayer-12.0\shell\adb.exe", help="adb路径")
+        parser.add_argument("-p", "--port", "--adb-port", type=int, default=16384, help="adb端口")
+        parser.add_argument("-c", "--count", "--max-count", type=int, default=-1, help="最大局数")
+        parser.add_argument("-l", "--log", "--log-path", type=str, default=None, help="日志文件路径")
+        parser.add_argument("-s", "--sleep", type=float, default=1.5, help="点击后等待时间")
+        parser.add_argument("-e", "--encore", "--encore-path", type=str, default=r".\image\encore.png",
+                            help="再次出击图片路径")
+        parser.add_argument("-r", "--retire", "--retire-path", type=str, default=r".\image\retire.png",
+                            help="退役图片路径")
+        parser.add_argument("-t", "--temp", "--temp-path", type=str, default=r".\image\sc.png",
+                            help="临时图片路径")
+        parser.add_argument("--pos", "--pos-path", type=str, default=r".\config\mm12.2560.1440.pkl",
+                            help="位置文件路径")
+        # 解析参数
+        args = parser.parse_args()
+        al = AzureLaneAssistant(adb_path=args.adb, pos_path=args.pos, retire_path=args.retire, encore_path=args.encore,
+                                temp_path=args.temp, port=args.port, max_count=args.count, log_file=args.log)
+        al.d3(args.sleep)
+
+    @staticmethod
+    def run_with_json(path: str):
+        import json
+        with open(path, "r") as file:
+            config = json.load(file)
+        sleep = config.pop("sleep", 1.5)
+        AzureLaneAssistant(**config).d3(sleep)
+
     def load(self, path: str):
         with open(self._check_file(path), "rb") as file:
             self.__retire_position, self.__encore_position = pickle.load(file)
@@ -185,8 +215,7 @@ class AzureLane:
 
     def _check_retire_and_exec(self, x: int, y: int, sleep: float = 1.5):
         if x == self.__retire_position[0][0] and y == self.__retire_position[0][1]:
-            if self.__enable_logging:
-                self.__logger.info(f"第{self.__retire_count}次退役舰船")
+            self.__logger.info(f"第{self.__retire_count}次退役舰船")
             for x, y in self.__retire_position:
                 self.__adb.click(x, y)
                 time.sleep(sleep)
@@ -196,8 +225,7 @@ class AzureLane:
     def _check_encore_and_exec(self, x: int, y: int, sleep: float = 1.5):
         for ex, ey in self.__encore_position:
             if x == ex and y == ey:
-                if self.__enable_logging:
-                    self.__logger.info(f"第{self.__encore_count}次再次出击")
+                self.__logger.info(f"第{self.__encore_count}次再次出击")
                 self.__adb.click(x, y)
                 time.sleep(sleep)
                 self.__encore_count += 1
@@ -221,8 +249,7 @@ class AzureLane:
         bottom_right = (top_left[0] + sub_img.shape[1], top_left[1] + sub_img.shape[0])
         x = int((top_left[0] + bottom_right[0]) / 2)
         y = int((top_left[1] + bottom_right[1]) / 2)
-        if self.__enable_logging:
-            self.__logger.info(f"{os.path.basename(img_name)}与{os.path.basename(sub_img_name)}最接近的位置是({x},{y})")
+        self.__logger.debug(f"{os.path.basename(img_name)}与{os.path.basename(sub_img_name)}最接近的位置是({x},{y})")
         return x, y
 
     def d3(self, sleep: float = 1.5):
@@ -231,21 +258,18 @@ class AzureLane:
             cur = 0
             while True if self.__max_count == -1 else self.__encore_count < self.__max_count:
                 cur += 1
-                if self.__enable_logging:
-                    self.__logger.info(f"第{cur}次循环")
+                self.__logger.info(f"第{cur}次循环")
                 sc_path = self.__adb.screenshot(self.__temp_path)
                 self._check_encore_and_exec(*self._compare(sc_path, self.__encore_path), sleep=sleep)
                 self._check_retire_and_exec(*self._compare(sc_path, self.__retire_path), sleep=sleep)
                 time.sleep(sleep)
         except Exception as error:
-            if self.__enable_logging:
-                self.__logger.warning(f"\n脚本终止：{error}")
+            self.__logger.warning(f"\n脚本终止：{error}")
         finally:
             try:
                 os.remove(self.__temp_path)
             except FileNotFoundError:
                 pass
-            if self.__enable_logging:
-                self.__logger.info(f'''最终局数为{self.__encore_count}，退役次数为{self.__retire_count}
+            self.__logger.info(f'''最终局数为{self.__encore_count}，退役次数为{self.__retire_count}
 D3脚本结束运行：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}
 脚本运行时长：{time.time() - start_time:.2f}秒''')
