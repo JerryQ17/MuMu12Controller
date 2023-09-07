@@ -173,8 +173,7 @@ class AzureLaneAssistant:
         import argparse
         parser = argparse.ArgumentParser()
         # 添加参数
-        parser.add_argument("-a", "--adb", "--adb-path", type=str,
-                            default=r"C:\Program Files\Netease\MuMuPlayer-12.0\shell\adb.exe", help="adb路径")
+        parser.add_argument("-a", "--adb", "--adb-path", type=str, help="adb路径")
         parser.add_argument("-p", "--port", "--adb-port", type=int, default=16384, help="adb端口")
         parser.add_argument("-c", "--count", "--max-count", type=int, default=-1, help="最大局数")
         parser.add_argument("-l", "--log", "--log-path", type=str, default=None, help="日志文件路径")
@@ -185,8 +184,7 @@ class AzureLaneAssistant:
                             help="退役图片路径")
         parser.add_argument("-t", "--temp", "--temp-path", type=str, default=r".\image\sc.png",
                             help="临时图片路径")
-        parser.add_argument("--pos", "--pos-path", type=str, default=r".\config\mm12.2560.1440.pkl",
-                            help="位置文件路径")
+        parser.add_argument("--pos", "--pos-path", type=str, help="位置文件路径")
         # 解析参数
         args = parser.parse_args()
         al = AzureLaneAssistant(adb_path=args.adb, pos_path=args.pos, retire_path=args.retire, encore_path=args.encore,
